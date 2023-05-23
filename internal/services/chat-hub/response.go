@@ -11,6 +11,71 @@ type ResponseMessage struct {
 			Value   *string     `json:"value"`
 			Message *string     `json:"message"`
 		}
+		Messages []struct {
+			Text   *string `json:"text"`
+			Author *string `json:"author"`
+			From   struct {
+				Id   string      `json:"id"`
+				Name interface{} `json:"name"`
+			} `json:"from,omitempty"`
+			CreatedAt *time.Time `json:"createdAt"`
+			Timestamp *time.Time `json:"timestamp"`
+			Locale    *string    `json:"locale,omitempty"`
+			Market    *string    `json:"market,omitempty"`
+			Region    *string    `json:"region,omitempty"`
+			MessageId *string    `json:"messageId"`
+			RequestId *string    `json:"requestId"`
+			Nlu       struct {
+				ScoredClassification struct {
+					Classification *string     `json:"classification"`
+					Score          interface{} `json:"score"`
+				} `json:"scoredClassification"`
+				ClassificationRanking []struct {
+					Classification *string     `json:"classification"`
+					Score          interface{} `json:"score"`
+				} `json:"classificationRanking"`
+				QualifyingClassifications interface{} `json:"qualifyingClassifications"`
+				Ood                       interface{} `json:"ood"`
+				MetaData                  interface{} `json:"metaData"`
+				Entities                  interface{} `json:"entities"`
+			} `json:"nlu,omitempty"`
+			Offense  *string `json:"offense"`
+			Feedback struct {
+				Tag       interface{} `json:"tag"`
+				UpdatedOn interface{} `json:"updatedOn"`
+				Type      *string     `json:"type"`
+			} `json:"feedback"`
+			ContentOrigin *string     `json:"contentOrigin"`
+			Privacy       interface{} `json:"privacy"`
+			InputMethod   *string     `json:"inputMethod,omitempty"`
+			AdaptiveCards []struct {
+				Type    *string `json:"type"`
+				Version *string `json:"version"`
+				Body    []struct {
+					Type *string `json:"type"`
+					Text *string `json:"text"`
+					Wrap *bool   `json:"wrap"`
+				} `json:"body"`
+			} `json:"adaptiveCards,omitempty"`
+			SourceAttributions []interface{} `json:"sourceAttributions,omitempty"`
+			SuggestedResponses []struct {
+				Text        *string    `json:"text"`
+				Author      *string    `json:"author"`
+				CreatedAt   *time.Time `json:"createdAt"`
+				Timestamp   *time.Time `json:"timestamp"`
+				MessageId   *string    `json:"messageId"`
+				MessageType *string    `json:"messageType"`
+				Offense     *string    `json:"offense"`
+				Feedback    struct {
+					Tag       interface{} `json:"tag"`
+					UpdatedOn interface{} `json:"updatedOn"`
+					Type      *string     `json:"type"`
+				} `json:"feedback"`
+				ContentOrigin *string     `json:"contentOrigin"`
+				Privacy       interface{} `json:"privacy"`
+			} `json:"suggestedResponses,omitempty"`
+			SpokenText *string `json:"spokenText,omitempty"`
+		} `json:"messages"`
 	}
 	Arguments []struct {
 		Messages []struct {

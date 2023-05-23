@@ -23,8 +23,9 @@ type CliConfig struct {
 	WssLink    string
 	CookieFile string
 
-	Style  string
-	Prompt string
+	Style         string
+	Prompt        string
+	AdaptiveCards bool
 }
 
 func New(cliConfig CliConfig) Config {

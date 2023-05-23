@@ -1,15 +1,13 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 
-	"atomicgo.dev/cursor"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	chat_bot "github.com/StepanTita/go-EdgeGPT/chat-bot"
 	"github.com/StepanTita/go-EdgeGPT/common/config"
+	"github.com/StepanTita/go-EdgeGPT/internal/services/communicator"
 )
 
 func Run(args []string) bool {
@@ -67,6 +65,13 @@ func Run(args []string) bool {
 				Category:    "Bot:",
 				Destination: &cliConfig.Style,
 			},
+			&cli.BoolFlag{
+				Name:        "adaptive-cards",
+				Usage:       "Should the output include adaptive cards?",
+				Value:       true,
+				Category:    "Bot:",
+				Destination: &cliConfig.AdaptiveCards,
+			},
 			&cli.StringFlag{
 				Name:        "prompt",
 				Usage:       "Prompt to start with",
@@ -88,20 +93,9 @@ func Run(args []string) bool {
 						}
 					}()
 
-					bot := chat_bot.New(cfg)
+					comm := communicator.New(cfg)
 
-					out, err := bot.Ask(c.Context, cfg.InitialPrompt(), "creative", false)
-					if err != nil {
-						log.WithError(err).Error("failed to ask bot")
-					}
-
-					for resp := range out {
-						cursor.StartOfLine()
-						cursor.ClearLine()
-						fmt.Print(resp.Text)
-					}
-
-					return nil
+					return comm.Run(c.Context)
 				},
 			},
 		},

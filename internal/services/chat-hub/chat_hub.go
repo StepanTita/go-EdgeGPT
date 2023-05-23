@@ -65,10 +65,8 @@ func (c *ChatHub) AskStream(ctx context.Context, prompt string, conversationalSt
 		return nil, errors.Wrap(err, "failed to reestablish connection")
 	}
 
-	if c.request.invocationID == 0 {
-		if err := c.request.Update(prompt, conversationalStyle, options, searchResult); err != nil {
-			return nil, errors.Wrap(err, "failed to update chat hub request")
-		}
+	if err := c.request.Update(prompt, conversationalStyle, options, searchResult); err != nil {
+		return nil, errors.Wrap(err, "failed to update chat hub request")
 	}
 
 	msg, err := c.request.EncodeJson()

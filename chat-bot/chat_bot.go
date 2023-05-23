@@ -2,7 +2,7 @@ package chat_bot
 
 import (
 	"context"
-	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -17,71 +17,120 @@ type ChatBot struct {
 	log *logrus.Entry
 
 	cfg config.Config
+
+	conv    conversation.Conversation
+	chatHub chat_hub.ChatHub
+
+	state *conversation.State
+	once  *sync.Once
 }
 
-func New(cfg config.Config) ChatBot {
-	return ChatBot{
+func New(cfg config.Config) *ChatBot {
+	return &ChatBot{
 		log: cfg.Logging().WithField("service", "[CHAT-BOT]"),
 
 		cfg: cfg,
+
+		conv: conversation.New(cfg),
+		once: &sync.Once{},
 	}
 }
 
-func (c ChatBot) Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool) (<-chan ParsedFrame, error) {
-	conv := conversation.New(c.cfg)
+func (c *ChatBot) Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error) {
+	c.once.Do(func() {
+		var err error
+		c.state, err = c.conv.Create(ctx)
+		if err != nil {
+			c.log.WithError(err).Fatal("failed to create new conversation")
+		}
 
-	state, err := conv.Create(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create new conversation")
-	}
-	c.log.WithFields(logrus.Fields{
-		"result":          state.Result,
-		"conversation_id": state.ConversationID,
-		"client_id":       state.ClientID,
-	}).Info("Created conversation")
+		c.log.WithFields(logrus.Fields{
+			"result":          c.state.Result,
+			"conversation_id": c.state.ConversationID,
+			"client_id":       c.state.ClientID,
+		}).Info("Created conversation")
 
-	chatHub := chat_hub.New(c.cfg, state)
+		c.chatHub = chat_hub.New(c.cfg, c.state)
 
-	msgsChan, err := chatHub.AskStream(ctx, prompt, conversationStyle, searchResult)
+		msgsChan, err := c.chatHub.AskStream(ctx, c.cfg.InitialPrompt(), conversationStyle, searchResult, options...)
+		// just ignoring the reply to initial prompt
+		for range msgsChan {
+		}
+	})
+
+	msgsChan, err := c.chatHub.AskStream(ctx, prompt, conversationStyle, searchResult, options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to ask stream")
 	}
 
-	out, err := c.processMessages(msgsChan)
+	parsedFramesChan, err := c.processMessages(msgsChan)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process messages")
 	}
 
-	return out, nil
+	return parsedFramesChan, nil
 }
 
-func (c ChatBot) processMessages(msgsChan <-chan chat_hub.ResponseMessage) (<-chan ParsedFrame, error) {
-	out := make(chan ParsedFrame)
+func (c *ChatBot) processMessages(msgsChan <-chan chat_hub.ResponseMessage) (<-chan ParsedFrame, error) {
+	out := make(chan ParsedFr ame)
 
 	go func() {
-		var respTxt string
+		var respTxt, updatedTxt string
+		var wrap bool
+		var skip bool
+		suggestedResponses := make([]string, 0, 10)
 
 		for msg := range msgsChan {
-			if msg.Type == 1 && msg.Arguments[0].Messages != nil {
-				msgText := convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
-				if strings.HasSuffix(respTxt, "\n") {
-					continue
+			skip = false
+			wrap = false
+			respTxt = updatedTxt
+			if msg.Type == 1 && msg.Arguments[0].Messages != nil && msg.Arguments[0].Messages[0].Text != nil {
+				if c.cfg.AdaptiveCards() && msg.Arguments[0].Messages[0].MessageType == nil {
+					respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
+				} else {
+					respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].Text)
 				}
-				respTxt = msgText
+				updatedTxt = respTxt
 
-				out <- ParsedFrame{
-					Text: respTxt,
-					Skip: false,
+				if msg.Arguments[0].Messages[0].MessageType != nil {
+					updatedTxt = ""
+					wrap = true
 				}
+
+				if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == "RenderCardRequest" {
+					skip = true
+				}
+
 			} else if msg.Type == 2 {
 				if msg.Item.Result.Error != nil {
 					c.log.WithFields(logrus.Fields{
-						"value":   msg.Item.Result.Value,
-						"message": msg.Item.Result.Message,
+						"value":   convert.FromPtr(msg.Item.Result.Value),
+						"message": convert.FromPtr(msg.Item.Result.Message),
 					}).Fatal("Some error occurred")
 				}
+
+				if len(msg.Item.Messages) > 0 {
+					lastId := len(msg.Item.Messages) - 1
+
+					for _, suggestion := range msg.Item.Messages[lastId].SuggestedResponses {
+						suggestedResponses = append(suggestedResponses, convert.FromPtr(suggestion.Text))
+					}
+				}
+			}
+
+			if respTxt == "" {
+				skip = true
+			}
+
+			out <- ParsedFrame{
+				Text:               respTxt,
+				Wrap:               wrap,
+				Skip:               skip,
+				SuggestedResponses: suggestedResponses,
 			}
 		}
+
+		defer close(out)
 	}()
 
 	return out, nil
