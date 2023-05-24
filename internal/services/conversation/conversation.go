@@ -46,7 +46,7 @@ func (c Conversation) Create(ctx context.Context) (*State, error) {
 			"body":   body,
 			"status": status,
 		}).Error("create conversation request failed")
-		return nil, errors.New("")
+		return nil, errors.New("create conversation request failed")
 	}
 
 	state := State{}

@@ -13,7 +13,11 @@ import (
 	"github.com/StepanTita/go-EdgeGPT/internal/services/conversation"
 )
 
-type ChatBot struct {
+type ChatBot interface {
+	Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error)
+}
+
+type chatBot struct {
 	log *logrus.Entry
 
 	cfg config.Config
@@ -25,8 +29,8 @@ type ChatBot struct {
 	once  *sync.Once
 }
 
-func New(cfg config.Config) *ChatBot {
-	return &ChatBot{
+func New(cfg config.Config) ChatBot {
+	return &chatBot{
 		log: cfg.Logging().WithField("service", "[CHAT-BOT]"),
 
 		cfg: cfg,
@@ -36,7 +40,7 @@ func New(cfg config.Config) *ChatBot {
 	}
 }
 
-func (c *ChatBot) Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error) {
+func (c *chatBot) Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error) {
 	c.once.Do(func() {
 		var err error
 		c.state, err = c.conv.Create(ctx)
@@ -71,18 +75,16 @@ func (c *ChatBot) Ask(ctx context.Context, prompt, conversationStyle string, sea
 	return parsedFramesChan, nil
 }
 
-func (c *ChatBot) processMessages(msgsChan <-chan chat_hub.ResponseMessage) (<-chan ParsedFrame, error) {
-	out := make(chan ParsedFr ame)
+func (c *chatBot) processMessages(msgsChan <-chan chat_hub.ResponseMessage) (<-chan ParsedFrame, error) {
+	out := make(chan ParsedFrame)
 
 	go func() {
 		var respTxt, updatedTxt string
-		var wrap bool
-		var skip bool
 		suggestedResponses := make([]string, 0, 10)
 
 		for msg := range msgsChan {
-			skip = false
-			wrap = false
+			skip := false
+			wrap := false
 			respTxt = updatedTxt
 			if msg.Type == 1 && msg.Arguments[0].Messages != nil && msg.Arguments[0].Messages[0].Text != nil {
 				if c.cfg.AdaptiveCards() && msg.Arguments[0].Messages[0].MessageType == nil {

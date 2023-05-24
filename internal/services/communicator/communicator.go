@@ -22,7 +22,7 @@ type Communicator struct {
 
 	cfg config.Config
 
-	bot *chat_bot.ChatBot
+	bot chat_bot.ChatBot
 
 	suggestions []string
 }
