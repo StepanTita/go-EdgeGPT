@@ -1,9 +1,10 @@
 package chat_bot
 
 type ParsedFrame struct {
-	Text string
-	Wrap bool
-	Skip bool
+	Text          string
+	AdaptiveCards string
+	Wrap          bool
+	Skip          bool
 
 	SuggestedResponses []string
 }

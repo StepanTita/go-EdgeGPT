@@ -8,8 +8,6 @@ import (
 )
 
 type Area struct {
-	terminal Terminal
-
 	content string
 
 	height int
@@ -18,33 +16,41 @@ type Area struct {
 // NewArea returns a new Area.
 func NewArea() Area {
 	return Area{
-		terminal: NewDefault(),
-		height:   0,
+		height: 0,
 	}
 }
 
-// Clear clears the content of the Area.
+// Clear (lazy) instead of clearing the content of the Area,
+// moves the cursor to the beginning of the content to overwrite it.
 func (area *Area) Clear() {
-	area.terminal.StartOfLine()
+}
 
-	for area.height > 0 {
-		area.terminal.ClearLine()
-		area.terminal.PrevLine(1)
-		area.height--
-	}
-	area.terminal.ClearLine()
-	goterm.Flush()
+const CSI = "\x1b\x5b"
+
+// CUU - Cursor Up
+func CursorUp(n int) string {
+	return fmt.Sprintf("%s%dA", CSI, n)
+}
+
+func CursorHorizontalAbsolute(n int) string {
+	return fmt.Sprintf("%s%dG", CSI, n)
 }
 
 // Update overwrites the content of the Area.
 func (area *Area) Update(content string) {
-	area.Clear()
+
+	goterm.Print(CursorHorizontalAbsolute(0))
+
+	if area.height != 0 {
+		goterm.Print(CursorUp(area.height))
+	}
 
 	w := goterm.Width()
 	lines := FormatTextBreak(strings.TrimSuffix(content, "\n"), w, 3)
+	//lines := strings.Split(strings.TrimSuffix(content, "\n"), "\n")
 
 	for _, line := range lines {
-		fmt.Println(line)
+		goterm.Println(line)
 	}
 
 	area.content = content

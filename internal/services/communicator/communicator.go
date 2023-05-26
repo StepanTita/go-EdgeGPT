@@ -112,6 +112,7 @@ func (c *Communicator) executorWithContext(ctx context.Context) func(t string) {
 		} else {
 			area.Update(currText + text)
 		}
+		goterm.Flush()
 	}
 }
 
