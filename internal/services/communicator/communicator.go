@@ -6,15 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"atomicgo.dev/cursor"
 	markdown "github.com/MichaelMure/go-term-markdown"
-	"github.com/briandowns/spinner"
+	"github.com/buger/goterm"
 	"github.com/c-bata/go-prompt"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/term"
+
+	"github.com/briandowns/spinner"
 
 	chat_bot "github.com/StepanTita/go-EdgeGPT/chat-bot"
 	"github.com/StepanTita/go-EdgeGPT/common/config"
+	"github.com/StepanTita/go-EdgeGPT/common/terminal"
 )
 
 type Communicator struct {
@@ -48,8 +49,12 @@ func (c *Communicator) Run(ctx context.Context) error {
 
 func (c *Communicator) executorWithContext(ctx context.Context) func(t string) {
 	return func(t string) {
+		area := terminal.NewArea()
+
+		prefix := "Edge-GPT >>> "
+
 		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond,
-			spinner.WithSuffix(" Edge-GPT >>> "),
+			spinner.WithSuffix(fmt.Sprintf(" %s", prefix)),
 			spinner.WithHiddenCursor(false),
 		)
 
@@ -58,34 +63,55 @@ func (c *Communicator) executorWithContext(ctx context.Context) func(t string) {
 		parsedResponsesChan, err := c.bot.Ask(ctx, t, c.cfg.Style(), true)
 		if err != nil {
 			c.log.WithError(err).Error("failed to ask bot")
+			return
 		}
 
+		currText := prefix
+		text := ""
+
+		final := false
 		for resp := range parsedResponsesChan {
 			c.suggestions = resp.SuggestedResponses
-
-			text := resp.Text
-			if c.cfg.Rich() {
-				w, _, _ := term.GetSize(0)
-				text = string(markdown.Render(text, w, 0))
-			}
 
 			if resp.Skip {
 				continue
 			}
 
-			if resp.Wrap {
-				text = strings.TrimSuffix(text, "\n")
-
-				cursor.StartOfLine()
-				cursor.ClearLine()
-				fmt.Println(fmt.Sprintf("Edge-GPT >>> %s", text))
-				s.Suffix = " Edge-GPT >>> "
-			} else {
-				s.Suffix = fmt.Sprintf(" Edge-GPT >>> %s", text)
+			text = resp.Text
+			if c.cfg.Rich() {
+				w := goterm.Width()
+				text = string(markdown.Render(text, w, 0))
 			}
+
+			if !strings.HasSuffix(currText, prefix) {
+				currText += prefix
+			}
+
+			s.Lock()
+			if resp.Wrap {
+				currText += text
+				if !strings.HasSuffix(currText, "\n") {
+					currText += "\n"
+				}
+
+				area.Update(currText)
+
+				final = true
+			} else {
+				area.Update(currText + text)
+
+				final = false
+			}
+			s.Unlock()
 		}
+
 		s.Stop()
-		fmt.Print(s.Suffix[1:])
+
+		if final {
+			area.Update(currText)
+		} else {
+			area.Update(currText + text)
+		}
 	}
 }
 

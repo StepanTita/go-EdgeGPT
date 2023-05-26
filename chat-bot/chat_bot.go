@@ -79,23 +79,25 @@ func (c *chatBot) processMessages(msgsChan <-chan chat_hub.ResponseMessage) (<-c
 	out := make(chan ParsedFrame)
 
 	go func() {
-		var respTxt, updatedTxt string
+		var respTxt string
 		suggestedResponses := make([]string, 0, 10)
+
+		var currMessageType *string = nil
 
 		for msg := range msgsChan {
 			skip := false
 			wrap := false
-			respTxt = updatedTxt
-			if msg.Type == 1 && msg.Arguments[0].Messages != nil && msg.Arguments[0].Messages[0].Text != nil {
+			respTxt = ""
+
+			if msg.Type == 1 && msg.Arguments[0].Messages != nil {
 				if c.cfg.AdaptiveCards() && msg.Arguments[0].Messages[0].MessageType == nil {
 					respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
 				} else {
 					respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].Text)
 				}
-				updatedTxt = respTxt
 
-				if msg.Arguments[0].Messages[0].MessageType != nil {
-					updatedTxt = ""
+				if msg.Arguments[0].Messages[0].MessageType != currMessageType {
+					currMessageType = msg.Arguments[0].Messages[0].MessageType
 					wrap = true
 				}
 

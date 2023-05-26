@@ -3,9 +3,9 @@ module github.com/StepanTita/go-EdgeGPT
 go 1.20
 
 require (
-	atomicgo.dev/cursor v0.1.1
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/briandowns/spinner v1.23.0
+	github.com/buger/goterm v1.0.4
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/gobwas/ws v1.2.0
 	github.com/google/uuid v1.3.0
