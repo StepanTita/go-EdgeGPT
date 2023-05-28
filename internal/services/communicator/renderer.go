@@ -154,8 +154,10 @@ func (r *renderer) initCall() tea.Msg {
 
 	if err := r.bot.Init(r.ctx, r.cfg.Style()); err != nil {
 		r.log.WithError(err).Error("failed to initialize bot state")
-		// TODO: remove this panic, and make bot more fault-tolerant
-		panic(err)
+		return communicatorError{
+			err:    err,
+			reason: "failed to initialize bot state",
+		}
 	}
 
 	r.state = initCompletedState
@@ -177,13 +179,11 @@ func (r *renderer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return r, tea.Batch(r.anim.Init(), r.initCall)
 	case chatInput:
 		r.content = msg.content
-		if r.cfg.AdaptiveCards() {
-			if msg.content != "" {
-				s := fmt.Sprintf("%s\n\n%s", msg.content, msg.adaptiveCards)
-				r.content = fmt.Sprintf("%s %s", r.prefix, strings.TrimPrefix(s, "\n"))
-			}
-			r.content = fmt.Sprintf("%s %s", r.prefix, strings.TrimPrefix(msg.adaptiveCards, "\n"))
+		if msg.content != "" {
+			s := fmt.Sprintf("%s\n\n%s", msg.content, msg.adaptiveCards)
+			r.content = fmt.Sprintf("%s %s", r.prefix, strings.TrimPrefix(s, "\n"))
 		}
+		r.content = fmt.Sprintf("%s %s", r.prefix, strings.TrimPrefix(msg.adaptiveCards, "\n"))
 
 		return r, tea.Batch(r.anim.Init(), r.readFrame)
 	case chatOutput:

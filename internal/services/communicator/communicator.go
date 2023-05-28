@@ -2,6 +2,7 @@ package communicator
 
 import (
 	"context"
+	"runtime/debug"
 
 	"github.com/c-bata/go-prompt"
 	"github.com/charmbracelet/lipgloss"
@@ -49,17 +50,28 @@ func (c *Communicator) executorWithContext(ctx context.Context) func(t string) {
 		c.renderer = c.renderer.withState(completionState)
 		c.renderer = c.renderer.withInput(t)
 
-		c.checkCommand(t)
+		if !c.checkCommand(t) {
+			return
+		}
 
 		if err := c.renderer.run(ctx); err != nil {
 			c.log.WithError(err).Error("failed to run renderer")
 		}
+
+		defer func() {
+			if rvr := recover(); rvr != nil {
+				c.log.Error("communicator panicked: ", rvr, string(debug.Stack()))
+				c.log.Info("bot communication will be reset")
+				c.reset()
+			}
+		}()
 	}
 }
 
 func (c *Communicator) completer(d prompt.Document) []prompt.Suggest {
 	s := []prompt.Suggest{
-		{Text: HelpCommand},
+		// TODO: help command
+		//{Text: HelpCommand},
 		{Text: ExitCommand},
 		{Text: ResetCommand},
 	}
@@ -71,9 +83,18 @@ func (c *Communicator) completer(d prompt.Document) []prompt.Suggest {
 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
 }
 
-func (c *Communicator) checkCommand(t string) {
-	if t == ResetCommand {
-		c.renderer = c.renderer.withState(startState)
-		c.renderer.withContent("")
+func (c *Communicator) checkCommand(t string) (exit bool) {
+	switch t {
+	case ResetCommand:
+		c.reset()
+		return false
+	case ExitCommand:
+		return true
 	}
+	return false
+}
+
+func (c *Communicator) reset() {
+	c.renderer = c.renderer.withState(startState)
+	c.renderer.withContent("")
 }

@@ -48,13 +48,6 @@ func (c connector) Request(ctx context.Context, r RequestParams) (io.ReadCloser,
 		return nil, 0, errors.Wrap(err, "failed to create new request")
 	}
 
-	for _, cookie := range c.cfg.Cookies() {
-		req.AddCookie(&http.Cookie{
-			Name:  cookie["name"].(string),
-			Value: cookie["value"].(string),
-		})
-	}
-
 	req.Header = common.HEADERS_HTTPS
 
 	resp, err := c.client.Do(req)

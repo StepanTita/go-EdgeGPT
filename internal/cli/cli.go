@@ -49,26 +49,11 @@ func Run(args []string) bool {
 				Destination: &cliConfig.WssLink,
 			},
 			&cli.StringFlag{
-				Name:        "cookie-file",
-				Usage:       "Cookie file used for authentication (defaults to COOKIE_FILE environment variable)",
-				Value:       os.Getenv("COOKIE_FILE"),
-				Category:    "Networking:",
-				Required:    false,
-				Destination: &cliConfig.CookieFile,
-			},
-			&cli.StringFlag{
 				Name:        "style",
 				Usage:       "Style of the conversation with bot ['creative', 'balanced', 'precise']",
 				Value:       "balanced",
 				Category:    "Bot:",
 				Destination: &cliConfig.Style,
-			},
-			&cli.BoolFlag{
-				Name:        "adaptive-cards",
-				Usage:       "Should the output include adaptive cards?",
-				Value:       true,
-				Category:    "Bot:",
-				Destination: &cliConfig.AdaptiveCards,
 			},
 			&cli.StringFlag{
 				Name:        "prompt",

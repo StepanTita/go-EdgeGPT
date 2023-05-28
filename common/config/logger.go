@@ -17,7 +17,9 @@ func NewLogger(lvl string) Logger {
 	log := logrus.New()
 	level, err := logrus.ParseLevel(lvl)
 	if err != nil {
-		panic(errors.Wrapf(err, "failed to parse log level: %s", lvl))
+		logrus.WithError(errors.Wrapf(err, "failed to parse log level: %s", lvl)).Error()
+		logrus.Warn("Defaulting to info...")
+		level = logrus.InfoLevel
 	}
 	log.SetLevel(level)
 

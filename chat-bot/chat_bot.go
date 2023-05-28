@@ -93,7 +93,7 @@ func (c *chatBot) processMessages(msgsChan <-chan chat_hub.ResponseMessage) (<-c
 			respTxt = ""
 
 			if msg.Type == 1 && msg.Arguments[0].Messages != nil {
-				if c.cfg.AdaptiveCards() && msg.Arguments[0].Messages[0].MessageType == nil {
+				if msg.Arguments[0].Messages[0].MessageType == nil {
 					adaptiveCardsTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
 				} else if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeDisengaged {
 					respTxt = "The conversation has been stopped prematurely... Sorry, please, restart the conversation"

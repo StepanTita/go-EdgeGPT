@@ -19,14 +19,12 @@ type CliConfig struct {
 	NoStream bool
 	Rich     bool
 
-	Proxy      string
-	WssLink    string
-	CookieFile string
+	Proxy   string
+	WssLink string
 
-	Style         string
-	Prompt        string
-	Context       string
-	AdaptiveCards bool
+	Style   string
+	Prompt  string
+	Context string
 }
 
 func NewFromCLI(cliConfig CliConfig) Config {
