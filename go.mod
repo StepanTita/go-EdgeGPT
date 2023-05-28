@@ -4,8 +4,6 @@ go 1.20
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
-	github.com/briandowns/spinner v1.23.0
-	github.com/buger/goterm v1.0.4
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/charmbracelet/bubbles v0.15.0
 	github.com/charmbracelet/bubbletea v0.24.1
@@ -13,6 +11,7 @@ require (
 	github.com/gobwas/ws v1.2.0
 	github.com/google/uuid v1.3.0
 	github.com/lucasb-eyer/go-colorful v1.2.0
+	github.com/mattn/go-isatty v0.0.18
 	github.com/muesli/termenv v0.15.1
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
@@ -35,7 +34,6 @@ require (
 	github.com/gomarkdown/markdown v0.0.0-20191123064959-2c17d62f5098 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.8 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
