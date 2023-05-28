@@ -2,7 +2,6 @@ package config
 
 type Runtime interface {
 	Version() string
-	NoStream() bool
 	Rich() bool
 }
 
@@ -12,25 +11,19 @@ const (
 )
 
 type runtime struct {
-	version  string
-	noStream bool
-	rich     bool
+	version string
+	rich    bool
 }
 
 func NewRuntime(version string, cliConfig CliConfig) Runtime {
 	return &runtime{
-		version:  version,
-		noStream: cliConfig.NoStream,
-		rich:     cliConfig.Rich,
+		version: version,
+		rich:    cliConfig.Rich,
 	}
 }
 
 func (d runtime) Version() string {
 	return d.version
-}
-
-func (d runtime) NoStream() bool {
-	return d.noStream
 }
 
 func (d runtime) Rich() bool {

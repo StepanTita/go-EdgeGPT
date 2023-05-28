@@ -2,20 +2,13 @@ package communicator
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"time"
 
-	markdown "github.com/MichaelMure/go-term-markdown"
-	"github.com/buger/goterm"
 	"github.com/c-bata/go-prompt"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/briandowns/spinner"
-
-	chat_bot "github.com/StepanTita/go-EdgeGPT/chat-bot"
 	"github.com/StepanTita/go-EdgeGPT/common/config"
-	"github.com/StepanTita/go-EdgeGPT/common/terminal"
 )
 
 type Communicator struct {
@@ -23,24 +16,28 @@ type Communicator struct {
 
 	cfg config.Config
 
-	bot chat_bot.ChatBot
-
-	suggestions []string
+	renderer *renderer
 }
 
-func New(cfg config.Config) *Communicator {
+func New(cfg config.Config, r *lipgloss.Renderer) *Communicator {
 	return &Communicator{
 		log: cfg.Logging().WithField("service", "[COMMUNICATOR]"),
 		cfg: cfg,
-		bot: chat_bot.New(cfg),
+
+		renderer: newRenderer(cfg, r),
 	}
 }
 
 func (c *Communicator) Run(ctx context.Context) error {
+	// Init prompt
+	if err := c.renderer.run(ctx); err != nil {
+		return errors.Wrap(err, "failed to run renderer")
+	}
+
 	inputSession := prompt.New(c.executorWithContext(ctx), c.completer,
 		// options
 		prompt.OptionSetExitCheckerOnInput(checkExit),
-		prompt.OptionPrefix("User >>> "),
+		prompt.OptionPrefix("> "),
 	)
 
 	inputSession.Run()
@@ -49,70 +46,14 @@ func (c *Communicator) Run(ctx context.Context) error {
 
 func (c *Communicator) executorWithContext(ctx context.Context) func(t string) {
 	return func(t string) {
-		area := terminal.NewArea()
+		c.renderer = c.renderer.withState(completionState)
+		c.renderer = c.renderer.withInput(t)
 
-		prefix := "Edge-GPT >>> "
+		c.checkCommand(t)
 
-		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond,
-			spinner.WithSuffix(fmt.Sprintf(" %s", prefix)),
-			spinner.WithHiddenCursor(false),
-		)
-
-		s.Start()
-
-		parsedResponsesChan, err := c.bot.Ask(ctx, t, c.cfg.Style(), true)
-		if err != nil {
-			c.log.WithError(err).Error("failed to ask bot")
-			return
+		if err := c.renderer.run(ctx); err != nil {
+			c.log.WithError(err).Error("failed to run renderer")
 		}
-
-		currText := prefix
-		text := ""
-
-		final := false
-		for resp := range parsedResponsesChan {
-			c.suggestions = resp.SuggestedResponses
-
-			if resp.Skip {
-				continue
-			}
-
-			text = resp.Text
-			if c.cfg.Rich() {
-				w := goterm.Width()
-				text = string(markdown.Render(text, w, 0))
-			}
-
-			if !strings.HasSuffix(currText, prefix) {
-				currText += prefix
-			}
-
-			s.Lock()
-			if resp.Wrap {
-				currText += text
-				if !strings.HasSuffix(currText, "\n") {
-					currText += "\n"
-				}
-
-				area.Update(currText)
-
-				final = true
-			} else {
-				area.Update(currText + text)
-
-				final = false
-			}
-			s.Unlock()
-		}
-
-		s.Stop()
-
-		if final {
-			area.Update(currText)
-		} else {
-			area.Update(currText + text)
-		}
-		goterm.Flush()
 	}
 }
 
@@ -123,9 +64,16 @@ func (c *Communicator) completer(d prompt.Document) []prompt.Suggest {
 		{Text: ResetCommand},
 	}
 
-	for _, suggestion := range c.suggestions {
+	for _, suggestion := range c.renderer.getSuggestions() {
 		s = append(s, prompt.Suggest{Text: suggestion})
 	}
 
 	return prompt.FilterHasPrefix(s, d.GetWordBeforeCursor(), true)
+}
+
+func (c *Communicator) checkCommand(t string) {
+	if t == ResetCommand {
+		c.renderer = c.renderer.withState(startState)
+		c.renderer.withContent("")
+	}
 }

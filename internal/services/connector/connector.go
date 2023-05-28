@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -31,7 +32,7 @@ func New(cfg config.Config) Connector {
 
 		cfg: cfg,
 		client: http.Client{
-			Timeout: 0,
+			Timeout: 10 * time.Second,
 		},
 	}
 }

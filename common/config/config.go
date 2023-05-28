@@ -25,10 +25,11 @@ type CliConfig struct {
 
 	Style         string
 	Prompt        string
+	Context       string
 	AdaptiveCards bool
 }
 
-func New(cliConfig CliConfig) Config {
+func NewFromCLI(cliConfig CliConfig) Config {
 	return &config{
 		Logger:    NewLogger(cliConfig.LogLevel),
 		Runtime:   NewRuntime(Version, cliConfig),

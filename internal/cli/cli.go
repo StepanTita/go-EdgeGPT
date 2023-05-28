@@ -2,7 +2,12 @@ package cli
 
 import (
 	"os"
+	"runtime/debug"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-isatty"
+	"github.com/muesli/termenv"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
@@ -21,13 +26,6 @@ func Run(args []string) bool {
 				Value:       "info",
 				Category:    "Miscellaneous:",
 				Destination: &cliConfig.LogLevel,
-			},
-			&cli.BoolFlag{
-				Name:        "no-stream",
-				Usage:       "Do not stream and format the output",
-				Value:       true,
-				Category:    "Miscellaneous:",
-				Destination: &cliConfig.NoStream,
 			},
 			&cli.BoolFlag{
 				Name:        "rich",
@@ -78,22 +76,34 @@ func Run(args []string) bool {
 				Category:    "Bot:",
 				Destination: &cliConfig.Prompt,
 			},
+			&cli.StringFlag{
+				Name:        "context",
+				Usage:       "Bot context to include in every request",
+				Category:    "Bot:",
+				Destination: &cliConfig.Context,
+			},
 		},
 		Commands: cli.Commands{
 			{
 				Name:  "run",
 				Usage: "run EdgeGPT daemon",
 				Action: func(c *cli.Context) error {
-					cfg := config.New(cliConfig)
+					cfg := config.NewFromCLI(cliConfig)
 					log := cfg.Logging()
 
 					defer func() {
 						if rvr := recover(); rvr != nil {
-							log.Error("internal panicked: ", rvr)
+							log.Error("internal panicked: ", rvr, string(debug.Stack()))
 						}
 					}()
 
-					comm := communicator.New(cfg)
+					renderer := lipgloss.NewRenderer(os.Stderr, termenv.WithColorCache(true))
+					opts := []tea.ProgramOption{tea.WithOutput(renderer.Output())}
+					if !isatty.IsTerminal(os.Stdin.Fd()) {
+						opts = append(opts, tea.WithInput(nil))
+					}
+
+					comm := communicator.New(cfg, renderer)
 
 					return comm.Run(c.Context)
 				},
