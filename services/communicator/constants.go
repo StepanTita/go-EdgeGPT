@@ -1,6 +1,7 @@
 package communicator
 
 const (
+	// TODO: implement help command
 	HelpCommand  = "!help"
 	ExitCommand  = "!exit"
 	ResetCommand = "!reset"
@@ -11,8 +12,6 @@ const (
 	initStatusText = "Chat initialization"
 	generationText = "Generation"
 )
-
-const markdownPrefix = "Format the response as Markdown."
 
 type state int
 

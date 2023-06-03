@@ -20,10 +20,10 @@ type networker struct {
 	wssLink string
 }
 
-func NewNetworker(cliConfig CliConfig) Networker {
+func NewNetworker(proxy, wssLink string) Networker {
 	return &networker{
-		proxy:   cliConfig.Proxy,
-		wssLink: cliConfig.WssLink,
+		proxy:   proxy,
+		wssLink: wssLink,
 	}
 }
 

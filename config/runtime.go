@@ -15,10 +15,10 @@ type runtime struct {
 	rich    bool
 }
 
-func NewRuntime(version string, cliConfig CliConfig) Runtime {
+func NewRuntime(version string, rich bool) Runtime {
 	return &runtime{
 		version: version,
-		rich:    cliConfig.Rich,
+		rich:    rich,
 	}
 }
 

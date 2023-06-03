@@ -8,7 +8,7 @@ import (
 
 	"github.com/StepanTita/go-EdgeGPT/common"
 	"github.com/StepanTita/go-EdgeGPT/common/convert"
-	"github.com/StepanTita/go-EdgeGPT/internal/services/conversation"
+	"github.com/StepanTita/go-EdgeGPT/services/conversation"
 )
 
 type chatHubRequest struct {

@@ -2,14 +2,18 @@ package communicator
 
 import (
 	"context"
+	"os"
 	"runtime/debug"
 
 	"github.com/c-bata/go-prompt"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-isatty"
+	"github.com/muesli/termenv"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/StepanTita/go-EdgeGPT/common/config"
+	"github.com/StepanTita/go-EdgeGPT/config"
 )
 
 type Communicator struct {
@@ -20,7 +24,15 @@ type Communicator struct {
 	renderer *renderer
 }
 
-func New(cfg config.Config, r *lipgloss.Renderer) *Communicator {
+func New(cfg config.Config) *Communicator {
+	r := lipgloss.NewRenderer(os.Stderr, termenv.WithColorCache(true))
+
+	opts := []tea.ProgramOption{tea.WithOutput(r.Output())}
+
+	if !isatty.IsTerminal(os.Stdin.Fd()) {
+		opts = append(opts, tea.WithInput(nil))
+	}
+
 	return &Communicator{
 		log: cfg.Logging().WithField("service", "[COMMUNICATOR]"),
 		cfg: cfg,

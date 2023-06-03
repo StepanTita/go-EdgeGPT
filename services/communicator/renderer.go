@@ -12,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	chat_bot "github.com/StepanTita/go-EdgeGPT/chat-bot"
-	"github.com/StepanTita/go-EdgeGPT/common/config"
-	"github.com/StepanTita/go-EdgeGPT/common/terminal"
+	"github.com/StepanTita/go-EdgeGPT/config"
+	terminal2 "github.com/StepanTita/go-EdgeGPT/terminal"
 )
 
 type renderer struct {
@@ -39,7 +39,7 @@ type renderer struct {
 	Error    *communicatorError
 	state    state
 	retries  int
-	styles   terminal.Styles
+	styles   terminal2.Styles
 	renderer *lipgloss.Renderer
 	anim     tea.Model
 
@@ -61,11 +61,11 @@ type chatOutput struct {
 type initPrompt struct{}
 
 func newRenderer(cfg config.Config, r *lipgloss.Renderer, opts ...tea.ProgramOption) *renderer {
-	styles := terminal.NewStyles(r)
+	styles := terminal2.NewStyles(r)
 
 	prefix := styles.Prefix.Render("Edge-GPT >")
 	if r.ColorProfile() == termenv.TrueColor {
-		prefix = terminal.MakeGradientText(styles.Prefix, "Edge-GPT >")
+		prefix = terminal2.MakeGradientText(styles.Prefix, "Edge-GPT >")
 	}
 
 	rend := &renderer{
@@ -129,12 +129,6 @@ func (r *renderer) Init() tea.Cmd {
 		}
 	}
 
-	r.userInput = fmt.Sprintf("%s\n\n%s", r.cfg.Context(), r.userInput)
-
-	if r.cfg.Rich() {
-		r.userInput = strings.ReplaceAll(r.userInput, "{{markdown}}", markdownPrefix)
-	}
-
 	var err error
 	r.parsedResponsesChan, err = r.bot.Ask(r.ctx, r.userInput, r.cfg.Style(), true)
 	if err != nil {
@@ -152,11 +146,21 @@ func (r *renderer) Init() tea.Cmd {
 func (r *renderer) initCall() tea.Msg {
 	r.state = initRunningState
 
-	if err := r.bot.Init(r.ctx, r.cfg.Style()); err != nil {
+	if err := r.bot.Init(r.ctx); err != nil {
 		r.log.WithError(err).Error("failed to initialize bot state")
 		return communicatorError{
 			err:    err,
 			reason: "failed to initialize bot state",
+		}
+	}
+
+	if r.cfg.InitialPrompt() != "" {
+		if err := r.bot.InitPrompt(r.ctx, r.cfg.Style()); err != nil {
+			r.log.WithError(err).Error("failed to run initial prompt")
+			return communicatorError{
+				err:    err,
+				reason: "failed to run initial prompt",
+			}
 		}
 	}
 
@@ -169,13 +173,13 @@ func (r *renderer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case initPrompt:
 		if r.state == initCompletedState {
-			r.anim = terminal.NewCyclingChars(cyclingChars, generationText, r.renderer, r.styles)
+			r.anim = terminal2.NewCyclingChars(cyclingChars, generationText, r.renderer, r.styles)
 			return r, tea.Quit
 		} else if r.state == initRunningState {
 			return r, r.anim.Init()
 		}
 
-		r.anim = terminal.NewCyclingChars(cyclingChars, initStatusText, r.renderer, r.styles)
+		r.anim = terminal2.NewCyclingChars(cyclingChars, initStatusText, r.renderer, r.styles)
 		return r, tea.Batch(r.anim.Init(), r.initCall)
 	case chatInput:
 		r.content = msg.content

@@ -1,18 +1,13 @@
 package cli
 
 import (
-	"os"
 	"runtime/debug"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-isatty"
-	"github.com/muesli/termenv"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"github.com/StepanTita/go-EdgeGPT/common/config"
-	"github.com/StepanTita/go-EdgeGPT/internal/services/communicator"
+	"github.com/StepanTita/go-EdgeGPT/config"
+	"github.com/StepanTita/go-EdgeGPT/services/communicator"
 )
 
 func Run(args []string) bool {
@@ -59,6 +54,7 @@ func Run(args []string) bool {
 				Name:        "prompt",
 				Usage:       "Prompt to start with",
 				Category:    "Bot:",
+				Required:    false,
 				Destination: &cliConfig.Prompt,
 			},
 			&cli.StringFlag{
@@ -82,13 +78,7 @@ func Run(args []string) bool {
 						}
 					}()
 
-					renderer := lipgloss.NewRenderer(os.Stderr, termenv.WithColorCache(true))
-					opts := []tea.ProgramOption{tea.WithOutput(renderer.Output())}
-					if !isatty.IsTerminal(os.Stdin.Fd()) {
-						opts = append(opts, tea.WithInput(nil))
-					}
-
-					comm := communicator.New(cfg, renderer)
+					comm := communicator.New(cfg)
 
 					return comm.Run(c.Context)
 				},

@@ -8,27 +8,27 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/StepanTita/go-EdgeGPT/common/config"
-	"github.com/StepanTita/go-EdgeGPT/internal/services/connector"
+	"github.com/StepanTita/go-EdgeGPT/config"
+	connector2 "github.com/StepanTita/go-EdgeGPT/services/connector"
 )
 
 type Conversation struct {
 	log *logrus.Entry
 	cfg config.Config
 
-	conn connector.Connector
+	conn connector2.Connector
 }
 
 func New(cfg config.Config) Conversation {
 	return Conversation{
 		log:  cfg.Logging().WithField("service", "[CONVERSATION]"),
 		cfg:  cfg,
-		conn: connector.New(cfg),
+		conn: connector2.New(cfg),
 	}
 }
 
 func (c Conversation) Create(ctx context.Context) (*State, error) {
-	bodyReader, status, err := c.conn.Request(ctx, connector.RequestParams{
+	bodyReader, status, err := c.conn.Request(ctx, connector2.RequestParams{
 		// https://edge.churchless.tech TODO: might need to try that as well if the first one failed
 		Url:  "https://edgeservices.bing.com",
 		Path: "/edgesvc/turing/conversation/create",

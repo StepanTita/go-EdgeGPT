@@ -2,19 +2,24 @@ package chat_bot
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/StepanTita/go-EdgeGPT/common"
-	"github.com/StepanTita/go-EdgeGPT/common/config"
 	"github.com/StepanTita/go-EdgeGPT/common/convert"
-	chat_hub "github.com/StepanTita/go-EdgeGPT/internal/services/chat-hub"
-	"github.com/StepanTita/go-EdgeGPT/internal/services/conversation"
+	"github.com/StepanTita/go-EdgeGPT/config"
+	"github.com/StepanTita/go-EdgeGPT/services/chat-hub"
+	"github.com/StepanTita/go-EdgeGPT/services/conversation"
 )
 
+const markdownPrefix = "Format the response as Markdown."
+
 type ChatBot interface {
-	Init(ctx context.Context, conversationStyle string, options ...string) error
+	Init(ctx context.Context) error
+	InitPrompt(ctx context.Context, conversationStyle string, options ...string) error
 	Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error)
 }
 
@@ -39,7 +44,7 @@ func New(cfg config.Config) ChatBot {
 	}
 }
 
-func (c *chatBot) Init(ctx context.Context, conversationStyle string, options ...string) error {
+func (c *chatBot) Init(ctx context.Context) error {
 	var err error
 	c.state, err = c.conv.Create(ctx)
 	if err != nil {
@@ -53,7 +58,10 @@ func (c *chatBot) Init(ctx context.Context, conversationStyle string, options ..
 	}).Info("Created conversation")
 
 	c.chatHub = chat_hub.New(c.cfg, c.state)
+	return nil
+}
 
+func (c *chatBot) InitPrompt(ctx context.Context, conversationStyle string, options ...string) error {
 	msgsChan, err := c.chatHub.AskStream(ctx, c.cfg.InitialPrompt(), conversationStyle, false, options...)
 	if err != nil {
 		return errors.Wrap(err, "failed to ask stream")
@@ -65,6 +73,15 @@ func (c *chatBot) Init(ctx context.Context, conversationStyle string, options ..
 }
 
 func (c *chatBot) Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error) {
+
+	if c.cfg.Context() != "" {
+		prompt = fmt.Sprintf("%s\n\n%s", c.cfg.Context(), prompt)
+	}
+
+	if c.cfg.Rich() {
+		prompt = strings.ReplaceAll(prompt, "{{markdown}}", markdownPrefix)
+	}
+
 	msgsChan, err := c.chatHub.AskStream(ctx, prompt, conversationStyle, searchResult, options...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to ask stream")

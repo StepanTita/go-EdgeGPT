@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/StepanTita/go-EdgeGPT/internal/cli"
+	"github.com/StepanTita/go-EdgeGPT/cli"
 )
 
 func main() {

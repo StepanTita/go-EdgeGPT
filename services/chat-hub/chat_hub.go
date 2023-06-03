@@ -11,8 +11,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/StepanTita/go-EdgeGPT/common/config"
-	"github.com/StepanTita/go-EdgeGPT/internal/services/conversation"
+	"github.com/StepanTita/go-EdgeGPT/config"
+	"github.com/StepanTita/go-EdgeGPT/services/conversation"
 )
 
 type ChatHub struct {

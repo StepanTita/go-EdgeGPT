@@ -12,11 +12,11 @@ type prompter struct {
 	context       string
 }
 
-func NewPrompter(cliConfig CliConfig) Prompter {
+func NewPrompter(style, prompt, context string) Prompter {
 	return &prompter{
-		style:         cliConfig.Style,
-		initialPrompt: cliConfig.Prompt,
-		context:       cliConfig.Context,
+		style:         style,
+		initialPrompt: prompt,
+		context:       context,
 	}
 }
 

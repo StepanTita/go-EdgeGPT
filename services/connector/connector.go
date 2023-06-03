@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/StepanTita/go-EdgeGPT/common"
-	"github.com/StepanTita/go-EdgeGPT/common/config"
+	"github.com/StepanTita/go-EdgeGPT/config"
 )
 
 type Connector interface {
