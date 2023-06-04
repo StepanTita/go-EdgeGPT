@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"runtime/debug"
+	"time"
 
 	"github.com/c-bata/go-prompt"
 	tea "github.com/charmbracelet/bubbletea"
@@ -66,7 +67,10 @@ func (c *Communicator) executorWithContext(ctx context.Context) func(t string) {
 			return
 		}
 
-		if err := c.renderer.run(ctx); err != nil {
+		deadlineCtx, cancel := context.WithDeadline(ctx, time.Now().Add(10*time.Minute))
+		defer cancel()
+
+		if err := c.renderer.run(deadlineCtx); err != nil {
 			c.log.WithError(err).Error("failed to run renderer")
 		}
 
@@ -99,11 +103,11 @@ func (c *Communicator) checkCommand(t string) (exit bool) {
 	switch t {
 	case ResetCommand:
 		c.reset()
-		return false
-	case ExitCommand:
 		return true
+	case ExitCommand:
+		return false
 	}
-	return false
+	return true
 }
 
 func (c *Communicator) reset() {

@@ -4,7 +4,6 @@ import (
 	crand "crypto/rand"
 	"encoding/hex"
 	"math/rand"
-	"regexp"
 	"time"
 
 	"github.com/pkg/errors"
@@ -49,20 +48,4 @@ func MustGenerateRandomHex(length int) string {
 		return ""
 	}
 	return hex.EncodeToString(bytes)
-}
-
-func ExtractURLs(s string) []string {
-	rLink := regexp.MustCompile(`(https?):\/\/([\w.-]+)(\/[\w\-.]*)*(\?[^#\n\r]*)?`)
-	linksSet := make(map[string]bool)
-
-	for _, match := range rLink.FindAllString(s, -1) {
-		linksSet[match] = true
-	}
-
-	linksList := make([]string, 0, 10)
-
-	for link := range linksSet {
-		linksList = append(linksList, link)
-	}
-	return linksList
 }

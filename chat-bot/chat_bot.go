@@ -87,7 +87,7 @@ func (c *chatBot) Ask(ctx context.Context, prompt, conversationStyle string, sea
 		return nil, errors.Wrap(err, "failed to ask stream")
 	}
 
-	parsedFramesChan, err := c.processMessages(msgsChan)
+	parsedFramesChan, err := c.processMessages(ctx, msgsChan)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process messages")
 	}
@@ -95,76 +95,93 @@ func (c *chatBot) Ask(ctx context.Context, prompt, conversationStyle string, sea
 	return parsedFramesChan, nil
 }
 
-func (c *chatBot) processMessages(msgsChan <-chan chat_hub.ResponseMessage) (<-chan ParsedFrame, error) {
+func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.ResponseMessage) (<-chan ParsedFrame, error) {
 	out := make(chan ParsedFrame)
 
 	go func() {
-		var respTxt, adaptiveCardsTxt string
+		defer close(out)
+
+		var respTxt, adaptiveCardsTxt, referencesText string
 		suggestedResponses := make([]string, 0, 10)
+		var links []ResponseLink
 
 		var currMessageType *string = nil
 
-		for msg := range msgsChan {
-			skip := false
-			wrap := false
-			respTxt = ""
+		frame := 0
+		for {
+			c.log.WithField("frame", frame).Debug("Parsing frame...")
+			frame++
+			select {
+			case <-ctx.Done():
+				c.log.WithTime(common.CurrentTimestamp()).Error("deadline exceeded")
+				return
+			case msg, ok := <-msgsChan:
+				if !ok {
+					return
+				}
+				skip := false
+				wrap := false
+				respTxt = ""
 
-			if msg.Type == 1 && msg.Arguments[0].Messages != nil {
-				if msg.Arguments[0].Messages[0].MessageType == nil {
-					adaptiveCardsTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
-				} else if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeDisengaged {
-					respTxt = "The conversation has been stopped prematurely... Sorry, please, restart the conversation"
-				} else {
-					respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].Text)
+				if msg.Type == 1 && msg.Arguments[0].Messages != nil {
+					if msg.Arguments[0].Messages[0].MessageType == nil {
+						adaptiveCardsTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
+					} else if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeDisengaged {
+						respTxt = "The conversation has been stopped prematurely... Sorry, please, restart the conversation"
+					} else {
+						respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].Text)
+					}
+
+					if msg.Arguments[0].Messages[0].MessageType != currMessageType {
+						currMessageType = msg.Arguments[0].Messages[0].MessageType
+						wrap = true
+					}
+
+					if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeRenderCardRequest {
+						skip = true
+					}
+
+				} else if msg.Type == 2 {
+					if msg.Item.Result.Error != nil {
+						c.log.WithFields(logrus.Fields{
+							"value":   convert.FromPtr(msg.Item.Result.Value),
+							"message": convert.FromPtr(msg.Item.Result.Message),
+						}).Fatal("Some error occurred")
+					}
+
+					if len(msg.Item.Messages) > 0 {
+						for _, item := range msg.Item.Messages {
+							if convert.FromPtr(item.ContentOrigin) == "Apology" {
+								adaptiveCardsTxt = convert.FromPtr(item.AdaptiveCards[0].Body[0].Text)
+							}
+						}
+
+						lastId := len(msg.Item.Messages) - 1
+
+						for _, suggestion := range msg.Item.Messages[lastId].SuggestedResponses {
+							suggestedResponses = append(suggestedResponses, convert.FromPtr(suggestion.Text))
+						}
+					}
 				}
 
-				if msg.Arguments[0].Messages[0].MessageType != currMessageType {
-					currMessageType = msg.Arguments[0].Messages[0].MessageType
-					wrap = true
-				}
-
-				if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeRenderCardRequest {
+				if respTxt == "" && adaptiveCardsTxt == "" {
 					skip = true
 				}
 
-			} else if msg.Type == 2 {
-				if msg.Item.Result.Error != nil {
-					c.log.WithFields(logrus.Fields{
-						"value":   convert.FromPtr(msg.Item.Result.Value),
-						"message": convert.FromPtr(msg.Item.Result.Message),
-					}).Fatal("Some error occurred")
+				if len(links) == 0 {
+					referencesText, links = ExtractURLs(adaptiveCardsTxt)
 				}
 
-				if len(msg.Item.Messages) > 0 {
-					for _, item := range msg.Item.Messages {
-						if convert.FromPtr(item.ContentOrigin) == "Apology" {
-							adaptiveCardsTxt = convert.FromPtr(item.AdaptiveCards[0].Body[0].Text)
-						}
-					}
-
-					lastId := len(msg.Item.Messages) - 1
-
-					for _, suggestion := range msg.Item.Messages[lastId].SuggestedResponses {
-						suggestedResponses = append(suggestedResponses, convert.FromPtr(suggestion.Text))
-					}
+				out <- ParsedFrame{
+					Text:               respTxt,
+					AdaptiveCards:      strings.ReplaceAll(adaptiveCardsTxt, referencesText, ""),
+					Links:              links,
+					Wrap:               wrap,
+					Skip:               skip,
+					SuggestedResponses: suggestedResponses,
 				}
-			}
-
-			if respTxt == "" && adaptiveCardsTxt == "" {
-				skip = true
-			}
-
-			out <- ParsedFrame{
-				Text:               respTxt,
-				AdaptiveCards:      adaptiveCardsTxt,
-				Links:              common.ExtractURLs(adaptiveCardsTxt),
-				Wrap:               wrap,
-				Skip:               skip,
-				SuggestedResponses: suggestedResponses,
 			}
 		}
-
-		defer close(out)
 	}()
 
 	return out, nil

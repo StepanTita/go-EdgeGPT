@@ -13,7 +13,7 @@ import (
 
 	chat_bot "github.com/StepanTita/go-EdgeGPT/chat-bot"
 	"github.com/StepanTita/go-EdgeGPT/config"
-	terminal2 "github.com/StepanTita/go-EdgeGPT/terminal"
+	"github.com/StepanTita/go-EdgeGPT/terminal"
 )
 
 type renderer struct {
@@ -39,7 +39,7 @@ type renderer struct {
 	Error    *communicatorError
 	state    state
 	retries  int
-	styles   terminal2.Styles
+	styles   terminal.Styles
 	renderer *lipgloss.Renderer
 	anim     tea.Model
 
@@ -61,11 +61,11 @@ type chatOutput struct {
 type initPrompt struct{}
 
 func newRenderer(cfg config.Config, r *lipgloss.Renderer, opts ...tea.ProgramOption) *renderer {
-	styles := terminal2.NewStyles(r)
+	styles := terminal.NewStyles(r)
 
 	prefix := styles.Prefix.Render("Edge-GPT >")
 	if r.ColorProfile() == termenv.TrueColor {
-		prefix = terminal2.MakeGradientText(styles.Prefix, "Edge-GPT >")
+		prefix = terminal.MakeGradientText(styles.Prefix, "Edge-GPT >")
 	}
 
 	rend := &renderer{
@@ -173,13 +173,13 @@ func (r *renderer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case initPrompt:
 		if r.state == initCompletedState {
-			r.anim = terminal2.NewCyclingChars(cyclingChars, generationText, r.renderer, r.styles)
+			r.anim = terminal.NewCyclingChars(cyclingChars, generationText, r.renderer, r.styles)
 			return r, tea.Quit
 		} else if r.state == initRunningState {
 			return r, r.anim.Init()
 		}
 
-		r.anim = terminal2.NewCyclingChars(cyclingChars, initStatusText, r.renderer, r.styles)
+		r.anim = terminal.NewCyclingChars(cyclingChars, initStatusText, r.renderer, r.styles)
 		return r, tea.Batch(r.anim.Init(), r.initCall)
 	case chatInput:
 		r.content = msg.content
