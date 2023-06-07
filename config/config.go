@@ -31,6 +31,7 @@ type CliConfig struct {
 	Style   string
 	Prompt  string
 	Context string
+	Locale  string
 }
 
 type YamlGPTConfig struct {
@@ -43,6 +44,7 @@ type YamlGPTConfig struct {
 	Style   string `yaml:"style"`
 	Prompt  string `yaml:"prompt"`
 	Context string `yaml:"context"`
+	Locale  string `yaml:"locale"`
 }
 
 type yamlConfig struct {
@@ -54,7 +56,7 @@ func NewFromGPTConfig(cfg YamlGPTConfig) Config {
 		Logger:    NewLogger(cfg.LogLevel),
 		Runtime:   NewRuntime(Version, cfg.Rich),
 		Networker: NewNetworker(cfg.Proxy, cfg.WssLink),
-		Prompter:  NewPrompter(cfg.Style, cfg.Prompt, cfg.Context),
+		Prompter:  NewPrompter(cfg.Style, cfg.Prompt, cfg.Context, cfg.Locale),
 	}
 }
 
@@ -79,6 +81,6 @@ func NewFromCLI(cfg CliConfig) Config {
 		Logger:    NewLogger(cfg.LogLevel),
 		Runtime:   NewRuntime(Version, cfg.Rich),
 		Networker: NewNetworker(cfg.Proxy, cfg.WssLink),
-		Prompter:  NewPrompter(cfg.Style, cfg.Prompt, cfg.Context),
+		Prompter:  NewPrompter(cfg.Style, cfg.Prompt, cfg.Context, cfg.Locale),
 	}
 }

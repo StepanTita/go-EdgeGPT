@@ -130,7 +130,7 @@ func (r *renderer) Init() tea.Cmd {
 	}
 
 	var err error
-	r.parsedResponsesChan, err = r.bot.Ask(r.ctx, r.userInput, r.cfg.Style(), true)
+	r.parsedResponsesChan, err = r.bot.Ask(r.ctx, r.userInput, r.cfg.Context(), r.cfg.Style(), true, r.cfg.Language())
 	if err != nil {
 		r.log.WithError(err).Error("failed to ask bot")
 		return func() tea.Msg {

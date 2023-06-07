@@ -63,6 +63,13 @@ func Run(args []string) bool {
 				Category:    "Bot:",
 				Destination: &cliConfig.Context,
 			},
+			&cli.StringFlag{
+				Name:        "locale",
+				Usage:       "Locale for bot to use",
+				Category:    "Bot:",
+				Value:       "en",
+				Destination: &cliConfig.Locale,
+			},
 		},
 		Commands: cli.Commands{
 			{

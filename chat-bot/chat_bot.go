@@ -15,12 +15,16 @@ import (
 	"github.com/StepanTita/go-EdgeGPT/services/conversation"
 )
 
-const markdownPrefix = "Format the response as Markdown."
+const (
+	markdownPrefix = "Format the response as Markdown."
+	languagePrefix = "In your response use: %s. Do not provide translation to english if language is not english."
+)
 
 type ChatBot interface {
 	Init(ctx context.Context) error
 	InitPrompt(ctx context.Context, conversationStyle string, options ...string) error
-	Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error)
+	Ask(ctx context.Context, prompt, context, conversationStyle string, searchResult bool, language string, options ...string) (<-chan ParsedFrame, error)
+	EstimatePrompt(prompt, context, language string) int
 }
 
 type chatBot struct {
@@ -72,15 +76,30 @@ func (c *chatBot) InitPrompt(ctx context.Context, conversationStyle string, opti
 	return nil
 }
 
-func (c *chatBot) Ask(ctx context.Context, prompt, conversationStyle string, searchResult bool, options ...string) (<-chan ParsedFrame, error) {
-
-	if c.cfg.Context() != "" {
-		prompt = fmt.Sprintf("%s\n\n%s", c.cfg.Context(), prompt)
+func (c *chatBot) EstimatePrompt(prompt, context, language string) int {
+	if context != "" {
+		prompt = fmt.Sprintf("%s\n\n%s", context, prompt)
 	}
 
 	if c.cfg.Rich() {
 		prompt = strings.ReplaceAll(prompt, "{{markdown}}", markdownPrefix)
 	}
+
+	prompt = strings.ReplaceAll(prompt, "{{language}}", fmt.Sprintf(languagePrefix, language))
+	return len(prompt)
+}
+
+func (c *chatBot) Ask(ctx context.Context, prompt, context, conversationStyle string, searchResult bool, language string, options ...string) (<-chan ParsedFrame, error) {
+
+	if context != "" {
+		prompt = fmt.Sprintf("%s\n\n%s", context, prompt)
+	}
+
+	if c.cfg.Rich() {
+		prompt = strings.ReplaceAll(prompt, "{{markdown}}", markdownPrefix)
+	}
+
+	prompt = strings.ReplaceAll(prompt, "{{language}}", fmt.Sprintf(languagePrefix, language))
 
 	msgsChan, err := c.chatHub.AskStream(ctx, prompt, conversationStyle, searchResult, options...)
 	if err != nil {

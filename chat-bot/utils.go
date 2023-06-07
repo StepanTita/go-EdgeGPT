@@ -14,7 +14,7 @@ func ExtractURLs(s string) (string, []ResponseLink) {
 
 	for _, match := range rLink.FindAllStringSubmatch(s, -1) {
 		linksList = append(linksList, ResponseLink{
-			ID:    match[1],
+			ID:    strings.TrimSuffix(strings.TrimPrefix(match[1], "["), "]"),
 			URL:   match[2],
 			Title: match[7],
 		})

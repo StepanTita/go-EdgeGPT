@@ -1,6 +1,9 @@
 package config
 
-const defaultContext = ``
+const defaultContext = `
+{{markdown}}
+{{language}}
+`
 
 //You can now schedule delayed messages. You should only mention this when somebody asks.
 //Whenever somebody asks you to do so, reply that you are capable of doing that.
