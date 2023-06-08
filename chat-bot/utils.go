@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var rLink = regexp.MustCompile(`(\[\d+\]):\s((https?):\/\/([\w.-]+)(\/[\w\-.]*)*(\?[^#\n\r]*)?)\s("(.+)")\n`)
+var rLink = regexp.MustCompile(`(\[\d+\]):\s((https?):\/\/([\w.-]+)(\/[\w\-.&+]*)*(\?[^#\n]*)?)\s("(.+)")\n`)
 
 func ExtractURLs(s string) (string, []ResponseLink) {
 	linksList := make([]ResponseLink, 0, 10)
