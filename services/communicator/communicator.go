@@ -62,6 +62,7 @@ func (c *Communicator) executorWithContext(ctx context.Context) func(t string) {
 	return func(t string) {
 		c.renderer = c.renderer.withState(completionState)
 		c.renderer = c.renderer.withInput(t)
+		c.renderer = c.renderer.withContent("")
 
 		if !c.checkCommand(t) {
 			return

@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"os"
 
+	dallecfg "github.com/StepanTita/go-BingDALLE/config"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -13,17 +14,20 @@ import (
 type Networker interface {
 	Proxy() *url.URL
 	WssLink() string
+	dallecfg.Networker
 }
 
 type networker struct {
 	proxy   string
 	wssLink string
+	dallecfg.Networker
 }
 
-func NewNetworker(proxy, wssLink string) Networker {
+func NewNetworker(apiUrl, proxy, wssLink string) Networker {
 	return &networker{
-		proxy:   proxy,
-		wssLink: wssLink,
+		proxy:     proxy,
+		wssLink:   wssLink,
+		Networker: dallecfg.NewNetworker(apiUrl, proxy),
 	}
 }
 

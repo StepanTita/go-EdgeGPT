@@ -79,6 +79,7 @@ type ResponseMessage struct {
 	}
 	Arguments []struct {
 		Messages []struct {
+			ContentType   *string    `json:"contentType"`
 			Text          *string    `json:"text"`
 			MessageType   *string    `json:"messageType"`
 			Author        *string    `json:"author"`

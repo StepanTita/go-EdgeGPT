@@ -9,9 +9,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	chat_bot "github.com/StepanTita/go-EdgeGPT/chat-bot"
+	"github.com/StepanTita/go-EdgeGPT/common/iter"
 	"github.com/StepanTita/go-EdgeGPT/config"
 	"github.com/StepanTita/go-EdgeGPT/terminal"
 )
@@ -51,6 +53,7 @@ type renderer struct {
 type chatInput struct {
 	content       string
 	adaptiveCards string
+	resources     []string
 }
 
 // chatOutput a tea.Msg that wraps the content returned from openai.
@@ -184,10 +187,16 @@ func (r *renderer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case chatInput:
 		r.content = msg.content
 		if msg.content != "" {
-			s := fmt.Sprintf("%s\n\n%s", msg.content, msg.adaptiveCards)
-			r.content = fmt.Sprintf("%s %s", r.prefix, strings.TrimPrefix(s, "\n"))
+			r.content = strings.TrimPrefix(msg.content, "\n")
+		} else if msg.content != "" && msg.adaptiveCards != "" {
+			r.content = fmt.Sprintf("%s\n\n%s\n", msg.content, msg.adaptiveCards)
+		} else {
+			r.content = strings.TrimPrefix(msg.adaptiveCards, "\n")
 		}
-		r.content = fmt.Sprintf("%s %s", r.prefix, strings.TrimPrefix(msg.adaptiveCards, "\n"))
+
+		if len(msg.resources) > 0 {
+			r.content = fmt.Sprintf("%s\n%s\n", r.content, strings.Join(msg.resources, "\n"))
+		}
 
 		return r, tea.Batch(r.anim.Init(), r.readFrame)
 	case chatOutput:
@@ -244,9 +253,9 @@ func (r *renderer) ErrorView() string {
 // prefix and standard in settings.
 func (r *renderer) FormattedOutput() string {
 	if r.cfg.Rich() {
-		return string(markdown.Render(r.content, r.width, 0))
+		return fmt.Sprintf("%s %s", r.prefix, string(markdown.Render(r.content, r.width, 0)))
 	}
-	return r.content
+	return fmt.Sprintf("%s %s", r.prefix, r.content)
 }
 
 // readFrame reads single frame from the input channel
@@ -256,9 +265,23 @@ func (r *renderer) readFrame() tea.Msg {
 		r.state = completionDoneState
 		return chatOutput{content: r.content}
 	}
+
+	if parsedFrame.ErrBody != nil {
+		return communicatorError{
+			err:    errors.New(parsedFrame.ErrBody.Message),
+			reason: parsedFrame.ErrBody.Reason,
+		}
+	}
+
 	r.suggestions = parsedFrame.SuggestedResponses
 	if parsedFrame.Skip {
 		return chatInput{content: r.content}
 	}
-	return chatInput{content: parsedFrame.Text, adaptiveCards: parsedFrame.AdaptiveCards}
+	return chatInput{
+		content:       parsedFrame.Text,
+		adaptiveCards: parsedFrame.AdaptiveCards,
+		resources: iter.Map(parsedFrame.Resources, func(i chat_bot.ResourceLink) string {
+			return i.URL
+		}),
+	}
 }

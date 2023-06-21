@@ -8,6 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
+	"github.com/StepanTita/go-BingDALLE/dalle"
+
 	"github.com/StepanTita/go-EdgeGPT/common"
 	"github.com/StepanTita/go-EdgeGPT/common/convert"
 	"github.com/StepanTita/go-EdgeGPT/config"
@@ -35,6 +37,8 @@ type chatBot struct {
 	conv    conversation.Conversation
 	chatHub chat_hub.ChatHub
 
+	imageGenerator dalle.Bot
+
 	state *conversation.State
 }
 
@@ -45,6 +49,8 @@ func New(cfg config.Config) ChatBot {
 		cfg: cfg,
 
 		conv: conversation.New(cfg),
+
+		imageGenerator: dalle.New(cfg),
 	}
 }
 
@@ -59,7 +65,7 @@ func (c *chatBot) Init(ctx context.Context) error {
 		"result":          c.state.Result,
 		"conversation_id": c.state.ConversationID,
 		"client_id":       c.state.ClientID,
-	}).Info("Created conversation")
+	}).Debug("Created conversation")
 
 	c.chatHub = chat_hub.New(c.cfg, c.state)
 	return nil
@@ -122,12 +128,14 @@ func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.
 
 		var respTxt, adaptiveCardsTxt, referencesText string
 		suggestedResponses := make([]string, 0, 10)
-		var links []ResponseLink
+		var sources []ResponseLink
+		var resources []ResourceLink
 
 		var currMessageType *string = nil
 
 		frame := 0
-		for {
+		finish := false
+		for !finish {
 			c.log.WithField("frame", frame).Debug("Parsing frame...")
 			frame++
 			select {
@@ -146,7 +154,21 @@ func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.
 					if msg.Arguments[0].Messages[0].MessageType == nil {
 						adaptiveCardsTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
 					} else if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeDisengaged {
-						respTxt = "The conversation has been stopped prematurely... Sorry, please, restart the conversation"
+						respTxt = "The conversation has been stopped prematurely... Sorry, please, restart the conversation\n"
+						finish = true
+					} else if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeGenerateContentQuery &&
+						convert.FromPtr(msg.Arguments[0].Messages[0].ContentType) == ContentTypeImage {
+						resourcesLinks, err := c.readImages(ctx, convert.FromPtr(msg.Arguments[0].Messages[0].Text))
+						if err != nil {
+							c.log.WithError(err).Errorf("failed to generate images from prompt: %s", convert.FromPtr(msg.Arguments[0].Messages[0].Text))
+						}
+
+						for _, link := range resourcesLinks {
+							resources = append(resources, ResourceLink{
+								Type: ContentTypeImage,
+								URL:  link,
+							})
+						}
 					} else {
 						respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].Text)
 					}
@@ -161,17 +183,22 @@ func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.
 					}
 
 				} else if msg.Type == 2 {
+					finish = true
+
 					if msg.Item.Result.Error != nil {
-						c.log.WithFields(logrus.Fields{
-							"value":   convert.FromPtr(msg.Item.Result.Value),
-							"message": convert.FromPtr(msg.Item.Result.Message),
-						}).Fatal("Some error occurred")
+						out <- ParsedFrame{
+							ErrBody: &ErrorBody{
+								Reason:  convert.FromPtr(msg.Item.Result.Value),
+								Message: convert.FromPtr(msg.Item.Result.Message),
+							},
+						}
+						return
 					}
 
 					if len(msg.Item.Messages) > 0 {
 						for _, item := range msg.Item.Messages {
 							if convert.FromPtr(item.ContentOrigin) == "Apology" {
-								adaptiveCardsTxt = convert.FromPtr(item.AdaptiveCards[0].Body[0].Text)
+								adaptiveCardsTxt = convert.FromPtr(item.AdaptiveCards[0].Body[0].Text) + "\n"
 							}
 						}
 
@@ -187,14 +214,15 @@ func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.
 					skip = true
 				}
 
-				if len(links) == 0 {
-					referencesText, links = ExtractURLs(adaptiveCardsTxt)
+				if len(sources) == 0 {
+					referencesText, sources = ExtractURLs(adaptiveCardsTxt)
 				}
 
 				out <- ParsedFrame{
 					Text:               respTxt,
 					AdaptiveCards:      strings.ReplaceAll(adaptiveCardsTxt, referencesText, ""),
-					Links:              links,
+					Sources:            sources,
+					Resources:          resources,
 					Wrap:               wrap,
 					Skip:               skip,
 					SuggestedResponses: suggestedResponses,
@@ -204,4 +232,18 @@ func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.
 	}()
 
 	return out, nil
+}
+
+func (c *chatBot) readImages(ctx context.Context, prompt string) ([]string, error) {
+	responseImagesChan, err := c.imageGenerator.CreateImages(ctx, prompt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create images channel")
+	}
+	for resp := range responseImagesChan {
+		if resp.Err != nil {
+			return nil, errors.Wrap(resp.Err, "failed to read from images chan")
+		}
+		return resp.Links, nil
+	}
+	return nil, errors.New("empty images response")
 }

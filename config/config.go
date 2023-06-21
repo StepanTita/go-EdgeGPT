@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 
+	dallecfg "github.com/StepanTita/go-BingDALLE/config"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -12,6 +13,7 @@ type Config interface {
 	Runtime
 	Networker
 	Prompter
+	dallecfg.Authenticator
 }
 
 type config struct {
@@ -19,6 +21,7 @@ type config struct {
 	Runtime
 	Networker
 	Prompter
+	dallecfg.Authenticator
 }
 
 type CliConfig struct {
@@ -32,6 +35,11 @@ type CliConfig struct {
 	Prompt  string
 	Context string
 	Locale  string
+
+	DaLLe struct {
+		ApiURL  string
+		UCookie string
+	}
 }
 
 type YamlGPTConfig struct {
@@ -45,6 +53,8 @@ type YamlGPTConfig struct {
 	Prompt  string `yaml:"prompt"`
 	Context string `yaml:"context"`
 	Locale  string `yaml:"locale"`
+
+	DaLLe dallecfg.YamlDALLEConfig `yaml:"dalle"`
 }
 
 type yamlConfig struct {
@@ -52,11 +62,15 @@ type yamlConfig struct {
 }
 
 func NewFromGPTConfig(cfg YamlGPTConfig) Config {
+	cfg.DaLLe.LogLevel = cfg.LogLevel
+	cfg.DaLLe.Proxy = cfg.Proxy
+
 	return &config{
-		Logger:    NewLogger(cfg.LogLevel),
-		Runtime:   NewRuntime(Version, cfg.Rich),
-		Networker: NewNetworker(cfg.Proxy, cfg.WssLink),
-		Prompter:  NewPrompter(cfg.Style, cfg.Prompt, cfg.Context, cfg.Locale),
+		Logger:        NewLogger(cfg.LogLevel),
+		Runtime:       NewRuntime(Version, cfg.Rich),
+		Networker:     NewNetworker(cfg.DaLLe.ApiUrl, cfg.Proxy, cfg.WssLink),
+		Prompter:      NewPrompter(cfg.Style, cfg.Prompt, cfg.Context, cfg.Locale),
+		Authenticator: dallecfg.NewAuthenticator(cfg.DaLLe.UCookie),
 	}
 }
 
@@ -80,7 +94,9 @@ func NewFromCLI(cfg CliConfig) Config {
 	return &config{
 		Logger:    NewLogger(cfg.LogLevel),
 		Runtime:   NewRuntime(Version, cfg.Rich),
-		Networker: NewNetworker(cfg.Proxy, cfg.WssLink),
+		Networker: NewNetworker(cfg.DaLLe.ApiURL, cfg.Proxy, cfg.WssLink),
 		Prompter:  NewPrompter(cfg.Style, cfg.Prompt, cfg.Context, cfg.Locale),
+
+		Authenticator: dallecfg.NewAuthenticator(cfg.DaLLe.UCookie),
 	}
 }

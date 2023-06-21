@@ -4,9 +4,10 @@ go 1.20
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
+	github.com/StepanTita/go-BingDALLE v0.0.0-00010101000000-000000000000
 	github.com/c-bata/go-prompt v0.2.6
-	github.com/charmbracelet/bubbles v0.15.0
-	github.com/charmbracelet/bubbletea v0.24.1
+	github.com/charmbracelet/bubbles v0.16.1
+	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/gobwas/ws v1.2.0
 	github.com/google/uuid v1.3.0
@@ -14,8 +15,9 @@ require (
 	github.com/mattn/go-isatty v0.0.18
 	github.com/muesli/termenv v0.15.1
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.0
-	github.com/urfave/cli/v2 v2.25.3
+	github.com/sirupsen/logrus v1.9.3
+	github.com/urfave/cli/v2 v2.25.5
+	golang.org/x/text v0.9.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -50,5 +52,6 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.3.8 // indirect
 )
+
+replace github.com/StepanTita/go-BingDALLE => ../../../github.com/StepanTita/go-BingDALLE

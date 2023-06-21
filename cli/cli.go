@@ -25,7 +25,7 @@ func Run(args []string) bool {
 			&cli.BoolFlag{
 				Name:        "rich",
 				Usage:       "Apply markdown renderer to output",
-				Value:       true,
+				Value:       false,
 				Category:    "Miscellaneous:",
 				Destination: &cliConfig.Rich,
 			},
@@ -69,6 +69,22 @@ func Run(args []string) bool {
 				Category:    "Bot:",
 				Value:       "en",
 				Destination: &cliConfig.Locale,
+			},
+			// DaLLe
+			&cli.StringFlag{
+				Name:        "bing-url",
+				Usage:       "Bing URL (e.g. https://www.bing.com)",
+				Category:    "DaLLe:",
+				Required:    false,
+				Value:       "https://www.bing.com",
+				Destination: &cliConfig.DaLLe.ApiURL,
+			},
+			&cli.StringFlag{
+				Name:        "u-auth-cookie",
+				Usage:       "Cookie value to authenticate request",
+				Category:    "DaLLe:",
+				Required:    true,
+				Destination: &cliConfig.DaLLe.UCookie,
 			},
 		},
 		Commands: cli.Commands{
