@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
-	github.com/StepanTita/go-BingDALLE v0.0.0-00010101000000-000000000000
+	github.com/StepanTita/go-BingDALLE v0.0.1-alpha1
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
@@ -53,5 +53,3 @@ require (
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
 )
-
-replace github.com/StepanTita/go-BingDALLE => ../../../github.com/StepanTita/go-BingDALLE
