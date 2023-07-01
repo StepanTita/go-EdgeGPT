@@ -81,6 +81,7 @@ func (c *ChatHub) AskStream(ctx context.Context, prompt string, conversationalSt
 	out := make(chan ResponseMessage)
 
 	go func() {
+		defer close(out)
 		for {
 			rawMsg, _, err := wsutil.ReadServerData(c.conn)
 			if err != nil {
@@ -101,7 +102,6 @@ func (c *ChatHub) AskStream(ctx context.Context, prompt string, conversationalSt
 				out <- responseMsg
 
 				if responseMsg.Type == 2 {
-					close(out)
 					c.conn.Close()
 					return
 				}
