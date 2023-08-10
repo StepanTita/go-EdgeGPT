@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"runtime/debug"
 
 	"github.com/sirupsen/logrus"
@@ -83,7 +84,7 @@ func Run(args []string) bool {
 				Name:        "u-auth-cookie",
 				Usage:       "Cookie value to authenticate request",
 				Category:    "DaLLe:",
-				Required:    true,
+				Required:    false,
 				Destination: &cliConfig.DaLLe.UCookie,
 			},
 		},
@@ -94,6 +95,8 @@ func Run(args []string) bool {
 				Action: func(c *cli.Context) error {
 					cfg := config.NewFromCLI(cliConfig)
 					log := cfg.Logging()
+
+					fmt.Print("\033[H\033[2J")
 
 					defer func() {
 						if rvr := recover(); rvr != nil {

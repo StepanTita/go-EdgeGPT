@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/StepanTita/go-BingDALLE/dalle"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	"github.com/StepanTita/go-BingDALLE/dalle"
 
 	"github.com/StepanTita/go-EdgeGPT/common"
 	"github.com/StepanTita/go-EdgeGPT/common/convert"
@@ -24,8 +23,16 @@ const (
 
 type ChatBot interface {
 	Init(ctx context.Context) error
+
+	GetState() *conversation.State
+	WithState(state conversation.State) ChatBot
+
+	// TODO: remove in the future, and replace with a combination of Init + Ask
 	InitPrompt(ctx context.Context, conversationStyle string, options ...string) error
+
 	Ask(ctx context.Context, prompt, context, conversationStyle string, searchResult bool, language string, options ...string) (<-chan ParsedFrame, error)
+
+	// TODO: maybe remove in the future
 	EstimatePrompt(prompt, context, language string) int
 }
 
@@ -69,6 +76,15 @@ func (c *chatBot) Init(ctx context.Context) error {
 
 	c.chatHub = chat_hub.New(c.cfg, c.state)
 	return nil
+}
+
+func (c *chatBot) GetState() *conversation.State {
+	return c.chatHub.GetState()
+}
+
+func (c *chatBot) WithState(state conversation.State) ChatBot {
+	c.chatHub = chat_hub.New(c.cfg, &state)
+	return c
 }
 
 func (c *chatBot) InitPrompt(ctx context.Context, conversationStyle string, options ...string) error {
@@ -152,7 +168,11 @@ func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.
 
 				if msg.Type == 1 && msg.Arguments[0].Messages != nil {
 					if msg.Arguments[0].Messages[0].MessageType == nil {
-						adaptiveCardsTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
+						if convert.FromPtr(msg.Arguments[0].Messages[0].ContentOrigin) == "TurnLimiter" {
+							respTxt = convert.FromPtr(msg.Arguments[0].Messages[0].Text)
+						} else {
+							adaptiveCardsTxt = convert.FromPtr(msg.Arguments[0].Messages[0].AdaptiveCards[0].Body[0].Text)
+						}
 					} else if convert.FromPtr(msg.Arguments[0].Messages[0].MessageType) == MessageTypeDisengaged {
 						respTxt = "The conversation has been stopped prematurely... Sorry, please, restart the conversation\n"
 						finish = true
@@ -197,7 +217,7 @@ func (c *chatBot) processMessages(ctx context.Context, msgsChan <-chan chat_hub.
 
 					if len(msg.Item.Messages) > 0 {
 						for _, item := range msg.Item.Messages {
-							if convert.FromPtr(item.ContentOrigin) == "Apology" {
+							if convert.FromPtr(item.ContentOrigin) == "Apology" || convert.FromPtr(item.ContentOrigin) == "DeepLeo" {
 								adaptiveCardsTxt = convert.FromPtr(item.AdaptiveCards[0].Body[0].Text) + "\n"
 							}
 						}

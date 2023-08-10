@@ -12,20 +12,14 @@ import (
 )
 
 type chatHubRequest struct {
-	conversationSignature *string
-	clientID              *string
-	conversationID        *string
-	invocationID          int
+	conversationState *conversation.State
 
 	state State
 }
 
 func newChatHubRequest(state *conversation.State) chatHubRequest {
 	return chatHubRequest{
-		conversationSignature: state.ConversationSignature,
-		clientID:              state.ClientID,
-		conversationID:        state.ConversationID,
-		invocationID:          0,
+		conversationState: state,
 	}
 }
 
@@ -123,21 +117,21 @@ func (r *chatHubRequest) Update(prompt, conversationStyle string, options []stri
 					"403tvlansgnd",
 				},
 				TraceId:          common.MustGenerateRandomHex(32),
-				IsStartOfSession: r.invocationID == 0,
+				IsStartOfSession: r.conversationState.InvocationID == 0,
 				Message: Message{
 					Author:      "user",
 					InputMethod: "Keyboard",
 					Text:        prompt,
 					MessageType: "Chat",
 				},
-				ConversationSignature: convert.FromPtr(r.conversationSignature),
+				ConversationSignature: convert.FromPtr(r.conversationState.ConversationSignature),
 				Participant: Participant{
-					Id: convert.FromPtr(r.clientID),
+					Id: convert.FromPtr(r.conversationState.ClientID),
 				},
-				ConversationId: convert.FromPtr(r.conversationID),
+				ConversationId: convert.FromPtr(r.conversationState.ConversationID),
 			},
 		},
-		InvocationId: strconv.Itoa(r.invocationID),
+		InvocationId: strconv.Itoa(r.conversationState.InvocationID),
 		Target:       "chat",
 		Type:         4,
 	}
@@ -151,7 +145,7 @@ func (r *chatHubRequest) Update(prompt, conversationStyle string, options []stri
 		}...)
 	}
 
-	r.invocationID += 1
+	r.conversationState.InvocationID += 1
 	return nil
 }
 

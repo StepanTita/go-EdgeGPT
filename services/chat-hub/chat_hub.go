@@ -37,6 +37,10 @@ func New(cfg config.Config, state *conversation.State) ChatHub {
 	}
 }
 
+func (c *ChatHub) GetState() *conversation.State {
+	return c.request.conversationState
+}
+
 func (c *ChatHub) initialHandshake(ctx context.Context) error {
 	conn, _, _, err := c.dialer.Dial(ctx, c.cfg.WssLink())
 	if err != nil {

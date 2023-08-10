@@ -10,4 +10,5 @@ type State struct {
 	ClientID              *string `json:"clientId"`
 	ConversationID        *string `json:"conversationId"`
 	Result                *Status `json:"result"`
+	InvocationID          int     `json:"invocationId,omitempty"`
 }
