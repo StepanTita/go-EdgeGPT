@@ -7,7 +7,7 @@ _A reverse-engineered Bing Chat API (not production ready)._
 Your bridge to Bing Chat from the command line. 
 Built with GoLang, `go-EdgeGPT` lets you access Bing Chat from any CLI or application!
 
-![BingChatCLI Demo](path_to_demo_screenshot_or_gif)
+https://github.com/StepanTita/go-EdgeGPT/assets/44279105/53078e84-e3d8-4124-a44b-e7273456f2d8
 
 ## Features 🌠
 - **Command-Line Access 💻**: Effortlessly interact with Bing Chat directly from your terminal.
